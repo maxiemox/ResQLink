@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Disaster Management Dashboard</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    
+    <style>
+        .request-list { max-height: 80vh; overflow-y: auto; }
+        .request-card { margin-bottom: 15px; border-left: 4px solid #007bff; }
+        .request-card.medical { border-left-color: #dc3545; }
+        .request-card.food { border-left-color: #28a745; }
+        .request-card.shelter { border-left-color: #ffc107; }
+        .category-badge { margin-right: 5px; }
+        .refresh-btn { position: fixed; bottom: 20px; right: 20px; z-index: 1000; }
+        .status-pending { color: #dc3545; }
+        .status-resolved { color: #28a745; }
+    </style>
+</head>
+<body>
+    
+    <nav class="navbar navbar-dark bg-dark">
+        <div class="container">
+            <span class="navbar-brand">Disaster Management Dashboard</span>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <h3>Disaster Relief Requests</h3>
+            </div>
+            <div class="col-md-6 text-end">
+                <div class="btn-group">
+                    <button class="btn btn-outline-primary active" data-filter="all">All</button>
+                    <button class="btn btn-outline-danger" data-filter="medical">Medical</button>
+                    <button class="btn btn-outline-success" data-filter="food">Food</button>
+                    <button class="btn btn-outline-warning" data-filter="shelter">Shelter</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <div id="requestList" class="request-list"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <button class="btn btn-primary refresh-btn" onclick="refreshData()">
+        <i class="fas fa-sync-alt"></i> Refresh
+    </button>
+
+    <script>
+        async function fetchRequests() {
+            try {
+                const response = await fetch('/api/get_requests');
+                if (!response.ok) {
+                    throw new Error('Failed to fetch data');
+                }
+                const data = await response.json();
+                return data.requests; // Access 'requests' key from API response
+            } catch (error) {
+                console.error('Error fetching requests:', error);
+                return [];
+            }
+        }
+
+        function createRequestCard(request) {
+            const statusClass = request.status === 'resolved' ? 'status-resolved' : 'status-pending';
+            const statusText = request.status === 'resolved' ? 'Resolved' : 'Pending';
+            
+            return `
+                <div class="card request-card ${request.category.toLowerCase()}" id="request-${request.id}">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <h5 class="card-title">
+                                    ${request.name}
+                                    <span class="badge bg-primary category-badge">${request.category}</span>
+                                    <small class="${statusClass}">● ${statusText}</small>
+                                </h5>
+                                <p class="card-text">${request.description}</p>
+                                <div class="text-muted">
+                                    <i class="fas fa-map-marker-alt"></i> ${request.location}<br>
+                                    <i class="fas fa-phone"></i> ${request.contact}
+                                </div>
+                            </div>
+                            <div class="col-md-4 text-end">
+                                <button class="btn btn-success btn-sm mb-2" 
+                                        onclick="markAsResolved(${request.id})"
+                                        ${request.status === 'resolved' ? 'disabled' : ''}>
+                                    <i class="fas fa-check"></i> Mark as Resolved
+                                </button>
+                                <button class="btn btn-info btn-sm mb-2" 
+                                        onclick="viewDetails(${request.id})">
+                                    <i class="fas fa-info-circle"></i> View Details
+                                </button>
+                                <div class="text-muted">
+                                    <small>Submitted: ${new Date(request.timestamp).toLocaleString()}</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function updateRequestList(requests) {
+            const requestList = document.getElementById('requestList');
+            if (requests.length === 0) {
+                requestList.innerHTML = `
+                    <div class="text-center text-muted p-5">
+                        <i class="fas fa-inbox fa-3x mb-3"></i>
+                        <p>No requests found</p>
+                    </div>
+                `;
+                return;
+            }
+            requestList.innerHTML = requests.map(createRequestCard).join('');
+        }
+
+        async function refreshData() {
+            const requests = await fetchRequests();
+            updateRequestList(requests);
+        }
+
+        async function markAsResolved(requestId) {
+            try {
+                const response = await fetch(`/api/resolve_request/${requestId}`, {
+                    method: 'POST'
+                });
+                if (response.ok) {
+                    refreshData();
+                }
+            } catch (error) {
+                console.error('Error resolving request:', error);
+            }
+        }
+
+        function viewDetails(requestId) {
+            console.log('Viewing details for request:', requestId);
+        }
+
+        // Filter requests by category
+        document.querySelectorAll('[data-filter]').forEach(button => {
+            button.addEventListener('click', async () => {
+                document.querySelectorAll('[data-filter]').forEach(btn => btn.classList.remove('active'));
+                button.classList.add('active');
+
+                const category = button.dataset.filter;
+                const requests = await fetchRequests();
+                const filtered = category === 'all' ? requests : requests.filter(r => r.category.toLowerCase() === category);
+                updateRequestList(filtered);
+            });
+        });
+
+        // Initial load
+        refreshData();
+
+        // Auto-refresh every 5 minutes
+        setInterval(refreshData, 300000);
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://kit.fontawesome.com/your-font-awesome-kit.js"></script>
+</body>
+</html>

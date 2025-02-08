@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Emergency Helpline</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <style>
+        .form-container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .emergency-header {
+            background-color: #dc3545;
+            color: white;
+            padding: 15px 0;
+            margin-bottom: 30px;
+        }
+        .form-label {
+            font-weight: 500;
+        }
+        .required::after {
+            content: "*";
+            color: #dc3545;
+            margin-left: 4px;
+        }
+        #successMessage {
+            display: none;
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+    <div class="form-container">
+        <div class="form-group">
+            <label class="form-label">Name</label>
+            <input class="form-input" type="text">
+        </div>
+        <button class="btn btn-primary">Submit</button>
+    </div>
+    <div class="emergency-header">
+        <div class="container text-center">
+            <h1 class="h3">Emergency Help Request</h1>
+            <p class="mb-0">Submit your request for immediate assistance</p>
+        </div>
+    </div>
+
+    <div class="container form-container">
+        <div class="alert alert-info mb-4">
+            <i class="fas fa-info-circle"></i> Please fill out this form with accurate information. Emergency services will respond based on the details provided.
+        </div>
+
+        <form id="helpRequestForm" onsubmit="submitRequest(event)">
+            <div class="mb-3">
+                <label for="name" class="form-label required">Full Name</label>
+                <input type="text" class="form-control" id="name" name="name" 
+                       placeholder="Enter your full name" required>
+            </div>
+
+            <div class="mb-3">
+                <label for="contact" class="form-label required">Contact Number</label>
+                <input type="tel" class="form-control" id="contact" name="contact" 
+                       placeholder="Enter your phone number" required>
+            </div>
+
+            <div class="mb-3">
+                <label for="location" class="form-label required">Location</label>
+                <input type="text" class="form-control" id="location" name="location" 
+                       placeholder="Enter your current location (be as specific as possible)" required>
+            </div>
+
+            <div class="mb-3">
+                <label for="category" class="form-label required">Type of Help Needed</label>
+                <select class="form-select" id="category" name="category" required>
+                    <option value="">Select type of help needed</option>
+                    <option value="medical">Medical Emergency</option>
+                    <option value="food">Food & Water</option>
+                    <option value="shelter">Shelter</option>
+                    <option value="rescue">Rescue Operation</option>
+                    <option value="other">Other</option>
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <label for="description" class="form-label required">Description of Emergency</label>
+                <textarea class="form-control" id="description" name="description" 
+                          rows="4" placeholder="Please describe your situation in detail" required></textarea>
+            </div>
+
+            <div class="mb-3">
+                <label for="people" class="form-label">Number of People Affected</label>
+                <input type="number" class="form-control" id="people" name="people" 
+                       placeholder="Enter number of people needing help" min="1">
+            </div>
+
+            <button type="submit" class="btn btn-danger btn-lg w-100">
+                <i class="fas fa-paper-plane"></i> Submit Emergency Request
+            </button>
+        </form>
+    </div>
+
+    <div class="toast" id="successMessage" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header bg-success text-white">
+            <strong class="me-auto">Success</strong>
+            <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+        <div class="toast-body">
+            Your request has been submitted successfully. Emergency services have been notified.
+        </div>
+    </div>
+
+    <script>
+        async function submitRequest(event) {
+            event.preventDefault();
+            
+            const form = event.target;
+            const submitButton = form.querySelector('button[type="submit"]');
+            
+            // Disable submit button to prevent double submission
+            submitButton.disabled = true;
+            submitButton.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Submitting...';
+
+            try {
+                const formData = {
+                    name: form.name.value,
+                    contact: form.contact.value,
+                    location: form.location.value,
+                    category: form.category.value,
+                    description: form.description.value,
+                    people_affected: form.people.value || 1,
+                    status: 'pending',
+                    timestamp: new Date().toISOString()
+                };
+
+                const response = await fetch('/api/submit', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                if (response.ok) {
+                    // Show success message
+                    const toast = new bootstrap.Toast(document.getElementById('successMessage'));
+                    toast.show();
+                    
+                    // Reset form
+                    form.reset();
+                    
+                    // Scroll to top
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                } else {
+                    throw new Error('Failed to submit request');
+                }
+            } catch (error) {
+                alert('Error submitting request. Please try again or contact emergency services directly.');
+                console.error('Error:', error);
+            } finally {
+                // Re-enable submit button
+                submitButton.disabled = false;
+                submitButton.innerHTML = '<i class="fas fa-paper-plane"></i> Submit Emergency Request';
+            }
+        }
+    </script>
+
+    <!-- Bootstrap JS and Font Awesome -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://kit.fontawesome.com/your-font-awesome-kit.js"></script>
+</body>
+</html>
