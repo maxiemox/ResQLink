@@ -1,4 +1,10 @@
 ResQLink 🎯
+❗❗❗❗❗❗❗
+deployment link- 
+for user-https://resqlink-g5va.onrender.com
+for authorities-https://resqlink-g5va.onrender.com/dashboard
+(we couldn't submit the url through tinkerhub)
+***************************
 Basic Details
 Team Name: NovaSync
 Team Members
